@@ -1,0 +1,21 @@
+{
+  "name": "ToDO!",
+  "description": "A great TODO app.",
+  "version": "0.1",
+  "manifest_version": 2,
+  "app": {
+    "background": {
+      "scripts": ["background.js"]
+    }
+  },
+  "permissions": [
+  	"alwaysOnTopWindows",
+  	{
+  		"fileSystem": ["write", "retainEntries"]
+  	},
+    "storage",
+    "*://popping-fire-791.firebaseio.com/*",
+    "https://cdn.firebase.com/*"
+  ],
+  "icons": { "16": "icon-16.png", "128": "icon-128.png" }
+}

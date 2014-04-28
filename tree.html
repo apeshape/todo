@@ -1,0 +1,11 @@
+<p class="item" ng-class="{ done: node.data.isDone}">
+	<span ng-click="ctrl.checkItem( node.id, node.data.isDone )">[{{ node.data.isDone ? 'x' : ' ' }}]</span> 
+	{{ node.data.description}}
+	<span class="action add" ng-click="ctrl.doAdd( $event )">+</span>
+	<span class="action delete" ng-click="ctrl.deleteItem( node )">-</span>
+	<span class="action hide" ng-click="ctrl.hide( $event )">hide</span>
+</p>
+<input type="text" ng-keypress="ctrl.addItem( node.id, $event )" >
+<ul>
+	<li ng-repeat="node in node.nodes | orderBy: 'data.weight'" ng-include=" 'tree.html?tt' "></li>
+</ul>

@@ -1,0 +1,33 @@
+{
+  "name": "todo",
+  "version": "0.0.1",
+  "authors": [
+    "Anders <anders@thebrewery.se>"
+  ],
+  "description": "Todo App",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "1.2.16",
+    "angular-resource": "1.2.13",
+    "angular-touch": "1.2.16",
+    "angular-sanitize": "1.2.13",
+    "jquery": "~2.1.0",
+    "greensock": "~1.11.4",
+    "modernizr": "~2.7.1",
+    "angularfire": "~0.7.1"
+  },
+  "devDependencies": {
+    "angular-cookies": "~1.2.14",
+    "bootstrap-sass": "~3.0.2",
+    "angular-route": "~1.2.14",
+    "angular-animate": "1.2.13",
+    "angular-ui-router": "~0.2.10"
+  }
+}
