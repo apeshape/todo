@@ -15,13 +15,15 @@ services.service('TodoService', ['$rootScope', '$firebase', function( $rootScope
 	function setup( ref, _scope ){
 		userRef = ref;
 		scope = _scope;
-		todos = userRef.child('todos');
+		// todos = userRef.child('todos');
+		todos = new Firebase( FIREBASE_URI + '/todos' );
+
 		todos.child('items').once('value', function( snapshot ){
 			allItems = snapshot.val();
 		});
 	}
 
-	function addItem( parentId, e){
+	function addItem( parentId, e ){
 		var val = angular.element(e.target).val()
 		if(e.keyCode == 13){
 			console.log(val, parentId);
@@ -32,14 +34,16 @@ services.service('TodoService', ['$rootScope', '$firebase', function( $rootScope
 				weight: 0
 			}
 			if( parentId == 0){
-				$firebase(todos).$child('parents').$add( item );
+				$firebase(todos).$child('lists').$add( item ).then( function( v ){
+					$firebase( userRef ).$child( 'myLists' ).$add( { id: v.name(), description: val } );
+				});
 			}
 			else{
-				todos.child('parents/' + parentId).once('value', function( snapshot ){
+				todos.child('lists/' + parentId).once('value', function( snapshot ){
 					//If snapshot.val then the parent is a top level item, otherwise add it to the 'items' 
 					var target = 'items';
 					if( snapshot.val() ){
-						target = 'parents';
+						target = 'lists';
 					}
 					$firebase(todos).$child('items').$add(item).then( function( v ){
 						$firebase(todos).$child( target + '/' + parentId ).$child('children').$add( v.name() );
@@ -53,7 +57,7 @@ services.service('TodoService', ['$rootScope', '$firebase', function( $rootScope
 		$firebase(todos).$child('items/' + id).$update({ isDone: !state });
 	}
 	function deleteFromParent( itemId, parentId ){
-		todos.child( 'parents/' + parentId ).once('value', function( snapshot ){
+		todos.child( 'lists/' + parentId ).once('value', function( snapshot ){
 			if( snapshot.val() ){
 				//Parent is top level
 				var parentRef = snapshot.ref().child('children');
@@ -98,7 +102,7 @@ services.service('TodoService', ['$rootScope', '$firebase', function( $rootScope
 		if( parentId != currentParent ){
 			currentParent = parentId;
 		}
-		todos.child('parents/' + parentId + '/children').on('value', function( snapshot ){
+		todos.child('lists/' + parentId + '/children').on('value', function( snapshot ){
 			var data = snapshot.val();
 			currentTopLevelIds = [];
 			if( data ){
@@ -135,13 +139,18 @@ services.service('TodoService', ['$rootScope', '$firebase', function( $rootScope
 		callback( list );
 	}
 
+	function getTodoRef(){
+		return todos;
+	}
+
 	return {
 		setup: setup,
 		getListForParent: getListForParent,
 		addItem: addItem,
 		getList: getList,
 		checkItem: checkItem,
-		deleteItem: deleteItem
+		deleteItem: deleteItem,
+		getTodoRef: getTodoRef
 	}
 
 } ] );
@@ -159,17 +168,27 @@ controllers.controller('mainCtrl', ['$scope', '$http', 'TodoService', '$firebase
 	ctrl.currentParent = null;
 
 
-	var auth = new FirebaseSimpleLogin(FB, function( error, user ){
+	var auth = new FirebaseSimpleLogin(FB, onUser);
+
+	function onUser( error, user ){
 		if(user != null){
 			var ref = new Firebase( FIREBASE_URI + '/users/' + user.uid );
 			var u = {
 				ref : ref,
 				ngRef : $firebase( ref ),
-				parentsRef : $firebase( ref.child('/todos/parents') )
 			}
 
 			TodoService.setup( ref );
+			var todos = TodoService.getTodoRef();
 
+
+			ref.child('invites').on('value', function( snapshot ){
+				ctrl.inviteCount = 0;
+				ctrl.invites = snapshot.val();
+				angular.forEach( ctrl.invites, function( val, index){
+					ctrl.inviteCount++;
+				} );
+			})
 			ref.once('value', function( snapshot ){
 				if( snapshot.val() === null ){
 					$firebase( ref ).$update( { email: user.email } );
@@ -178,11 +197,13 @@ controllers.controller('mainCtrl', ['$scope', '$http', 'TodoService', '$firebase
 				$scope.$apply(function(){
 					ctrl.user = user;
 					ctrl.user.refs = u;
+
+					ctrl.myLists = u.ngRef.$child('myLists');
+					console.log( ctrl.myLists );
 				});
 			});
 
-			//Kanske ska ha on('child_added?')
-			ref.child('todos/items').on('value', function( snapshot ){
+			todos.child('/items').on('value', function( snapshot ){
 				if( ctrl.currentParent ){
 					ctrl.allNodes = [];
 					TodoService.getList(snapshot, function( list ){
@@ -190,28 +211,29 @@ controllers.controller('mainCtrl', ['$scope', '$http', 'TodoService', '$firebase
 						ctrl.allNodes = list;
 					});
 				}
-				// console.log( snapshot.val() );
 			})
 		}
-	});
-
-	// ctrl.list = ngFB.$child('/todos');
+	}
 
 	ctrl.login = function(){
 		auth.login('password',{
 			email: ctrl.username,
 			password: ctrl.password
 		});
+		ctrl.username = ctrl.password = '';
 	}
 	ctrl.logout = function(){
 		auth.logout();
-		window.location.reload();
+		ctrl.user = null;
+		// window.location.reload();
 	}
 
-	ctrl.getListForParent = function( parentId ){
-		ctrl.currentParent = parentId;
+	ctrl.getListForParent = function( currentList ){
+		ctrl.currentList = currentList;
+		ctrl.currentParent = currentList.id;
+		console.log( ctrl.currentParent );
 		ctrl.allNodes = [];
-		TodoService.getListForParent( parentId, function( list ){
+		TodoService.getListForParent( ctrl.currentParent, function( list ){
 			ctrl.allNodes = list;
 			console.log( list );
 		} );
@@ -234,16 +256,25 @@ controllers.controller('mainCtrl', ['$scope', '$http', 'TodoService', '$firebase
 		input.focus();
 	}
 
-	// ctrl.deleteItem = function( item ){
-	// 	ctrl.list.$remove( item.id );
+	ctrl.createUser = function(){
+		console.log( ctrl.newUsername, ctrl.newPassword );
+		auth.createUser( ctrl.newUsername, ctrl.newPassword, onUser );
+	}
 
-	// 	if( item.nodes ){
-	// 		for(var i = 0; i < item.nodes.length; i++){
-	// 			ctrl.deleteItem( item.nodes[i] );
-	// 		}
-	// 	}
-	// }
+	ctrl.doShare = function(){
 
+		var toUserRef = new Firebase( FIREBASE_URI + '/users/' + ctrl.shareToUser );
+		toUserRef.once('value', function( snapshot ){
+			if( snapshot.val() ){
+				toUserRef.child('/invites').push().set({ todoId: ctrl.currentList.id, description: ctrl.currentList.description });
+			}
+		});
+	}
+
+	ctrl.acceptInvite = function( inviteId, invite ){
+		ctrl.user.refs.ngRef.$child('/myLists').$add({ description: invite.description, id: invite.todoId });
+		ctrl.user.refs.ngRef.$child('/invites/' + inviteId).$remove();
+	}
 
 }]);
 

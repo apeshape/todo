@@ -21,7 +21,8 @@
     "jquery": "~2.1.0",
     "greensock": "~1.11.4",
     "modernizr": "~2.7.1",
-    "angularfire": "~0.7.1"
+    "angularfire": "~0.7.1",
+    "bootstrap": "~3.1.1"
   },
   "devDependencies": {
     "angular-cookies": "~1.2.14",

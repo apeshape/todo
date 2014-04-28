@@ -6,26 +6,54 @@
 		<script src="js/firebase-simple-login.js"></script>
 		<script src="js/setup.js"></script>
 		<script src="js/firebase.js"></script>
+		<link rel="stylesheet" href="/bower_components/bootstrap/dist/css/bootstrap.css">
 		<link rel="stylesheet" href="style.css">
 	</head>
 	<body ng-app="todoApp" ng-controller="mainCtrl as ctrl" ng-csp>
-		<button ng-if="ctrl.user" style="position:fixed; top:30px; right:20px;" ng-click="ctrl.logout()">Logga ut</button>
-		<div ng-if="!ctrl.user" class="login">
-			<input type="text" ng-model="ctrl.username" placeholder="Username"><br/>
+		<button ng-if="ctrl.user" style="position:fixed; top:30px; right:20px;" ng-click="ctrl.logout()">Log ut</button>
+
+		<div ng-if="!ctrl.user && !ctrl.newUserScreen" class="login">
+			<input type="text" ng-model="ctrl.username" placeholder="Email"><br/>
 			<input type="password" ng-model="ctrl.password"><br/>
-			<button ng-click="ctrl.login()">Logga in</button>
+			<button ng-click="ctrl.login()">Log in</button>
+			<p>No user? <a href="" ng-click="ctrl.newUserScreen = true">Create new.</a></p>
 		</div>
+
+		<div ng-if="!ctrl.user && ctrl.newUserScreen">
+			<label><input type="text" ng-model="ctrl.newUsername" placeholder="Email"> Choose Email </label><br/>
+			<label><input type="password" ng-model="ctrl.newPassword"> Choose Password</label><br/>
+			<button ng-click="ctrl.createUser()">Create user</button>
+		</div>
+
 		
 		<div ng-if="ctrl.user">
-			<ul>
-				<li ng-repeat="(parentId, parent) in ctrl.user.refs.parentsRef"><a href="javascript:void(0);" ng-click="ctrl.getListForParent( parentId )">{{ parent.description }}</a></li>
-			</ul>
-			<input type="text" ng-keypress="ctrl.addItem( 0, $event )" placeholder="New List" >
+			<div ng-if="ctrl.inviteCount > 0">
+				{{ ctrl.inviteCount }} - <a href="javascript:void(0)" ng-click="ctrl.showInvites = !ctrl.showInvites">{{ ctrl.showInvites ? 'hide' : 'show' }} invites</a>
+				<div ng-if="ctrl.showInvites">
+					<ul>
+						<li ng-repeat="(inviteId, invite) in ctrl.invites">{{ invite.description }} - <a href="#" ng-click="ctrl.acceptInvite( inviteId, invite )">Accept</a></li>
+					</ul>
+				</div>
+			</div>
+			<div class="share" ng-if="ctrl.currentParent">
+				<input type="text" placeholder="Share to user" ng-model="ctrl.shareToUser">
+				<button ng-click="ctrl.doShare()">Share</button>
+			</div>
+			
+			<div>
+				<h3>My Lists</h3>
+				<input type="text" ng-keypress="ctrl.addItem( 0, $event )" placeholder="New List" ><br/>
+				<ul>
+					<li ng-repeat="list in ctrl.myLists"><a href="javascript:void(0);" ng-click="ctrl.getListForParent( list )">{{ list.description }}</a></li>
+				</ul>
+			</div>
 
-			<input type="text" ng-keypress="ctrl.addItem( ctrl.currentParent, $event )" placeholder="New item" >
-			<!--ul>
-				<li ng-repeat="node in ctrl.allNodes"> {{ node.data.description }} </li>
-			</ul-->
+			<div ng-if="ctrl.currentParent">
+
+				<input type="text" ng-keypress="ctrl.addItem( ctrl.currentParent, $event )" placeholder="New item to {{ ctrl.currentList.description }}" >
+				
+			</div>
+
 			<div class="main">
 				<ul>
 					<li ng-repeat="node in ctrl.allNodes | orderBy: 'data.weight'" ng-include=" 'tree.html?sick=5' "></li>
